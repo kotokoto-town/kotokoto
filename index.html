@@ -232,7 +232,7 @@ function showErr(e){try{errBox.hidden=false;errBox.textContent='エラーが お
 window.addEventListener('error',function(ev){showErr(ev.error||ev.message)});
 
 /* ================= constants & data ================= */
-var TS=16, MW=60, MH=40, DAYLEN=180;
+var TS=16, MW=140, MH=90, DAYLEN=180;
 var SLOTN=4,SLOT=0;try{SLOT=Math.max(0,Math.min(SLOTN-1,parseInt(localStorage.getItem('kotokoto_slot')||'0',10)||0))}catch(e){}
 function slotSfx(n){return n?'_s'+n:''}
 var SAVE_KEY='kotokoto_save_v1'+slotSfx(SLOT), BAK_KEY='kotokoto_save_v1'+slotSfx(SLOT)+'_bak', PREV_KEY='kotokoto_save_v1'+slotSfx(SLOT)+'_prev';
@@ -1289,7 +1289,40 @@ var LANDS=[
  {id:'NE',name:'ほくとうの こみち',x:44,y:0,w:16,h:11,lv:12,cost:25000},
  {id:'SW',name:'なんせいの はたけ',x:0,y:29,w:16,h:11,lv:16,cost:40000},
  {id:'NW',name:'ほくせいの たかだい',x:0,y:0,w:16,h:11,lv:20,cost:60000},
- {id:'SE',name:'なんとうの みなと',x:44,y:29,w:16,h:11,lv:20,cost:80000}
+ {id:'SE',name:'なんとうの みなと',x:44,y:29,w:16,h:11,lv:20,cost:80000},
+ {id:'X1',name:'ひろい そうげん',x:16,y:40,w:28,h:18,lv:8,cost:30000},
+ {id:'X2',name:'かぜの おか',x:0,y:40,w:16,h:18,lv:9,cost:35000},
+ {id:'X3',name:'ひみつの はやし',x:44,y:40,w:16,h:18,lv:10,cost:40000},
+ {id:'X4',name:'いけの ほとり',x:60,y:11,w:20,h:18,lv:11,cost:47000},
+ {id:'X5',name:'りんご ばたけ',x:60,y:0,w:20,h:11,lv:12,cost:54000},
+ {id:'X6',name:'ほしみの おか',x:60,y:29,w:20,h:11,lv:13,cost:63000},
+ {id:'X7',name:'ちょうちょの のはら',x:16,y:58,w:28,h:16,lv:14,cost:73000},
+ {id:'X8',name:'もりの おく',x:60,y:40,w:20,h:18,lv:15,cost:85000},
+ {id:'X9',name:'きらきら がわら',x:0,y:58,w:16,h:16,lv:16,cost:98000},
+ {id:'X10',name:'たんぽぽ ばたけ',x:44,y:58,w:16,h:16,lv:17,cost:114000},
+ {id:'X11',name:'くまの もり',x:80,y:11,w:20,h:18,lv:18,cost:132000},
+ {id:'X12',name:'しずかな みずうみ',x:60,y:58,w:20,h:16,lv:19,cost:154000},
+ {id:'X13',name:'ひまわり ばたけ',x:80,y:0,w:20,h:11,lv:20,cost:178000},
+ {id:'X14',name:'どんぐりの もり',x:80,y:29,w:20,h:11,lv:21,cost:207000},
+ {id:'X15',name:'にじの たにま',x:16,y:74,w:28,h:16,lv:22,cost:240000},
+ {id:'X16',name:'ふしぎな いずみ',x:0,y:74,w:16,h:16,lv:23,cost:278000},
+ {id:'X17',name:'おおきな きの した',x:44,y:74,w:16,h:16,lv:24,cost:322000},
+ {id:'X18',name:'ゆうひの おか',x:80,y:40,w:20,h:18,lv:25,cost:374000},
+ {id:'X19',name:'ほたるの さと',x:60,y:74,w:20,h:16,lv:26,cost:434000},
+ {id:'X20',name:'さくら なみき',x:80,y:58,w:20,h:16,lv:27,cost:503000},
+ {id:'X21',name:'いちょうの みち',x:100,y:11,w:20,h:18,lv:28,cost:584000},
+ {id:'X22',name:'もぐらの はらっぱ',x:100,y:0,w:20,h:11,lv:29,cost:677000},
+ {id:'X23',name:'うさぎの おか',x:100,y:29,w:20,h:11,lv:30,cost:786000},
+ {id:'X24',name:'きつねの もり',x:100,y:40,w:20,h:18,lv:31,cost:911000},
+ {id:'X25',name:'つばめの みさき',x:80,y:74,w:20,h:16,lv:32,cost:1057000},
+ {id:'X26',name:'かえるの ぬま',x:100,y:58,w:20,h:16,lv:33,cost:1226000},
+ {id:'X27',name:'あおぞら ひろば',x:120,y:11,w:20,h:18,lv:34,cost:1422000},
+ {id:'X28',name:'ぽかぽか だいち',x:120,y:0,w:20,h:11,lv:35,cost:1650000},
+ {id:'X29',name:'わくわく ランド',x:120,y:29,w:20,h:11,lv:36,cost:1914000},
+ {id:'X30',name:'ドキドキ ランド',x:100,y:74,w:20,h:16,lv:37,cost:2220000},
+ {id:'X31',name:'キラキラ ランド',x:120,y:40,w:20,h:18,lv:38,cost:2575000},
+ {id:'X32',name:'ゆめの だいち',x:120,y:58,w:20,h:16,lv:39,cost:2988000},
+ {id:'X33',name:'さいはての ち',x:120,y:74,w:20,h:16,lv:40,cost:3466000}
 ];
 var landGrid=new Uint8Array(MW*MH);
 LANDS.forEach(function(L,i){for(var y=L.y;y<L.y+L.h;y++)for(var x=L.x;x<L.x+L.w;x++)landGrid[y*MW+x]=i});
@@ -2011,7 +2044,7 @@ function rebuildOcc(){
   S.shops.forEach(function(o){for(var yy=o.y;yy<o.y+3;yy++)for(var xx=o.x;xx<o.x+3;xx++)occ[yy*MW+xx]=o.id});
 }
 function walkable(x,y,oc){if(x<0||y<0||x>=MW||y>=MH)return false;if((oc||occ)[y*MW+x])return false;return isMainRoad(x,y)||landUnlocked(x,y)}
-var EXITS=[[0,19],[0,20],[MW-1,19],[MW-1,20]];
+var EXITS=[[0,19],[0,20],[59,19],[59,20],[MW-1,19],[MW-1,20]];
 function bfs(srcs,oc){
   var INF=65535,d=new Uint16Array(MW*MH).fill(INF),q=new Int32Array(MW*MH),h=0,t=0;
   srcs.forEach(function(p){var i=p[1]*MW+p[0];if(d[i]!==INF)return;d[i]=0;q[t++]=i});
@@ -2982,7 +3015,7 @@ var cv=$('#cv'),ctx=cv.getContext('2d'),dpr=1,cvW=0,cvH=0;
 var cam={x:28.5*TS,y:18*TS,z:3};
 function scaleDev(){return Math.max(1,Math.round(cam.z*dpr))}
 function resize(){dpr=Math.min(2,window.devicePixelRatio||1);var w=cv.clientWidth||window.innerWidth||1024,h=cv.clientHeight||window.innerHeight||768;var W=Math.round(w*dpr),H=Math.round(h*dpr);if(W!==cvW||H!==cvH){cv.width=cvW=W;cv.height=cvH=H}}
-function setZoom(z){var mn=Math.max(1.5,Math.max((cvW/dpr)/(MW*TS),(cvH/dpr)/(MH*TS)));cam.z=clamp(z,mn,6);clampCam()}
+function setZoom(z){var mn=Math.max(1,Math.max((cvW/dpr)/(MW*TS),(cvH/dpr)/(MH*TS)));cam.z=clamp(z,mn,6);clampCam()}
 function clampCam(){var s=scaleDev(),hw=cvW/2/s,hh=cvH/2/s;cam.x=clamp(cam.x,Math.min(hw,MW*TS/2),Math.max(MW*TS-hw,MW*TS/2));cam.y=clamp(cam.y,Math.min(hh,MH*TS/2),Math.max(MH*TS-hh,MH*TS/2))}
 function centerCam(){var s=S&&S.shops[0];if(s){cam.x=(s.x+1.5)*TS;cam.y=(s.y+3)*TS}var w=cvW/dpr;setZoom(w>900?3:w>600?2.5:2)}
 function screenToWorld(sx,sy){var s=scaleDev();return {x:cam.x+(sx*dpr-cvW/2)/s,y:cam.y+(sy*dpr-cvH/2)/s}}
@@ -3016,7 +3049,9 @@ function tapAt(sx,sy){
   if(o2){sfx('click');if(o2.type)openSheet('shop',o2.id);else if(o2.k==='myhome')openSheet('home');else openSheet('obj',o2.id);return}
   if(UI.sheet)closeSheet();
 }
+function landTouches(L){for(var y=L.y-1;y<=L.y+L.h;y++)for(var x=L.x-1;x<=L.x+L.w;x++){if(x<0||y<0||x>=MW||y>=MH)continue;if(x>=L.x&&x<L.x+L.w&&y>=L.y&&y<L.y+L.h){if(isMainRoad(x,y))return true;continue}if(landUnlocked(x,y))return true}return false}
 function landDialog(L){
+  if(S.lv>=L.lv&&!landTouches(L)){dlg(L.name,'<p>この とちは まだ とおいよ。となりの とちを さきに かってね。</p><p class="note">じぶんの とちと くっついている とちから かえるよ。</p>',[{t:'わかった'}]);return}
   if(S.lv<L.lv){dlg(L.name,'<p>この とちは レベル'+L.lv+'で かえるように なるよ。（いまは Lv'+S.lv+'）</p>',[{t:'わかった'}]);return}
   dlg(L.name+' を かう？','<p>'+fmt(L.cost)+'コインで あたらしい とちが ふえて、おみせや かざりを おけるように なるよ。</p>',[{t:'かう（'+fmt(L.cost)+'）',c:'gold',f:function(){if(S.money<L.cost){toast(REASON.money,'bad');return}S.money-=L.cost;S.lands.push(L.id);afterMapChange();sfx('lv');toast(L.name+' が つかえるように なった！','gold');saveSoon()}},{t:'やめる'}]);
 }
