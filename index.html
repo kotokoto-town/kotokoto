@@ -2010,7 +2010,7 @@ function objCv(o,t){
 
 /* ================= state ================= */
 var S=null;
-function blank(){return {v:2,evt:defEvt(),cfurn:[],life:defLife(),stg:'main',stgOwn:[],stgData:{},home:defHome(),rooms:{},cbld:[],myCols:[],custom:[],cseq:0,inv:{wheat:30,milk:20,egg:20,sugar:15},created:Date.now(),savedAt:0,money:500,exp:0,lv:1,day:1,t:0.06,speed:1,
+function blank(){return {v:2,ura:{found:{},used:{}},evt:defEvt(),cfurn:[],life:defLife(),stg:'main',stgOwn:[],stgData:{},home:defHome(),rooms:{},cbld:[],myCols:[],custom:[],cseq:0,inv:{wheat:30,milk:20,egg:20,sugar:15},created:Date.now(),savedAt:0,money:500,exp:0,lv:1,day:1,t:0.06,speed:1,
   shops:[],objs:[],lands:['C'],known:{},hints:{},tried:{},insp:0,staff:[],cand:[],candDay:0,req:[],ach:{},guide:0,
   stats:{sold:0,rev:0,made:0,star:0,cust:0,miss:0,days:0,bestDay:0,reqDone:0,disc:0,rareDisc:0,matBought:0,matFarm:0,pp:{}},
   today:{rev:0,cost:0,wage:0,cust:0,miss:0,sold:0},event:'sun',vipDone:true,nid:1,set:{snd:1,bgm:1,autoBuy:0},fever:0,feverT:0}}
@@ -2477,8 +2477,8 @@ var DOCKC={stage:'#3a8ad8',home:'#ff9a5a',build:'#f0a030',shops:'#ff7aa8',market
 $('#dock').innerHTML=DOCK.map(function(d){return '<button class="dk win" style="--c:'+DOCKC[d[0]]+'" data-open="'+d[0]+'"><img src="'+iconURL(d[2],d[3],d[4])+'" alt="">'+d[1]+(d[0]==='goals'?'<span class="dot" id="goalDot" hidden></span>':'')+'</button>'}).join('');
 $('#coinIc').src=iconURL('coin','#ffd24a','#e09a1a');
 $('#dock').addEventListener('click',function(e){var b=e.target.closest('[data-open]');if(!b)return;sfx('click');var k=b.dataset.open;if(UI.sheet&&UI.sheet.kind===k){closeSheet();return}cancelPlace();openSheet(k)});
-$('#hMoney').onclick=function(){openSheet('shops')};
-$('#hLv').onclick=function(){openSheet('goals')};$('#hDay').onclick=function(){openSheet('goals')};
+$('#hMoney').onclick=function(){if(S)uraTap('coin',7,'coin');if(!UI.sheet||UI.sheet.kind!=='shops')openSheet('shops')};
+$('#hLv').onclick=function(){openSheet('goals')};$('#hDay').onclick=function(e){if(S&&e&&e.target&&e.target.id==='vSea')uraTap('sea',5,'sea');if(!UI.sheet||UI.sheet.kind!=='goals')openSheet('goals')};
 $('#hSpd').onclick=function(){S.speed=S.speed===1?2:S.speed===2?3:1;sfx('click');hud()};
 $('#hBgm').onclick=function(){audioInit();S.set.bgm=S.set.bgm?0:1;hud();toast(S.set.bgm?'おんがく オン':'おんがく オフ')};
 $('#hFev').onclick=function(){toast(S.feverT>0?'おおにぎわいタイム中！ おきゃくさん いっぱい・うりあげ1.2ばい':'うれると ゲージが たまるよ。いっぱいで「おおにぎわいタイム」！')};
@@ -2799,13 +2799,69 @@ SHEETS.goals=function(){
 (function(){var g0=SHEETS.goals;SHEETS.goals=function(sh){var tab=(sh&&sh.tab)||'goal';if(sh)sh.tab=tab;var tb=tabs([['goal','もくひょう'],['event','イベント'+(EVDEFS.some(function(d){return S.evt&&S.evt.done[d.id]&&!S.evt.got[d.id]})?' ！':'')]],tab);
   if(tab==='event')return ['きせつ イベント',tb,eventBody()];var r=g0(sh);r[1]=tb;return r}})();
 
+
+/* ===== うらわざ（ひみつの ことば・ひみつの タップ） =====
+   ふやす ときは URA に 1つ たすだけ。codes が ない ものは タップの うらわざ。
+   day:1 は 1にち 1かいだけ。セーブの S.ura に みつけた ものを きろく。 */
+function uraFix(){if(!S)return;var u=S.ura;if(!u||typeof u!=='object')u=S.ura={};['found','used'].forEach(function(k){if(!u[k]||typeof u[k]!=='object')u[k]={}})}
+var URA=[
+ {id:'okane',codes:['おかねふえろ','おかねちょうだい'],name:'おかね ふえろ',what:'50,000コイン もらえる（1にち 1かい）',hint:'おかねが ほしい ときの ことば。「おかね○○○」',day:1,
+  f:function(){addMoney(50000);bumpMoney();coinFly(cam.x,cam.y,14);return ['おかねが ふえた！','+50,000コイン']}},
+ {id:'matsuri',codes:['おまつり','おまつりだ'],name:'おまつり',what:'きょうの てんきが おまつりに なる（1にち 1かい）',hint:'まちが いちばん にぎやかに なる ひの なまえ',day:1,
+  f:function(){S.event='fest';hud();return ['きょうは おまつり！','おきゃくさんが いっぱい くるよ']}},
+ {id:'minna',codes:['みんなおいで'],name:'みんな おいで',what:'おきゃくさんが 15にん いっぺんに くる（1にち 1かい）',hint:'おきゃくさんを よぶ ことば。「みんな○○○」',day:1,
+  f:function(){for(var i=0;i<15;i++)setTimeout(function(){if(S)spawnCustomer()},i*150);return ['みんな あつまれー！','おきゃくさんが 15にん くるよ']}},
+ {id:'hayai',codes:['はやおくり'],name:'はやおくり',what:'じかんが 5ばいの はやさに なる（もういちど いうと もどる）',hint:'ビデオを はやく みる ときの ことば',
+  f:function(){S.speed=S.speed===5?1:5;hud();return S.speed===5?['はやおくり ×5！','もういちど いうと もとに もどるよ']:['はやさ ×1に もどったよ','']}},
+ {id:'ashita',codes:['あしたになれ'],name:'あしたに なれ',what:'すぐに つぎの ひに なる（きせつも すすむ）',hint:'つぎの ひに なってほしい ときの ことば。「あした○○○」',
+  f:function(){closeSheet();endDay();return null}},
+ {id:'lvup',codes:['れべるあっぷ'],name:'レベルアップ',what:'レベルが 1つ あがる（1にち 1かい）',hint:'レベルが あがる ときの ことば（ひらがなでも カタカナでも）',day:1,
+  ok:function(){return S.lv<MAXLV||'もう いちばん うえの レベルだよ'},f:function(){gainExp(Math.max(1,lvNeed(S.lv)-S.exp));return null}},
+ {id:'neko',codes:['ねこだいすき','にゃーん'],name:'ねこ だいすき',what:'まちに ねこが 10ぴき ふえる（もういちど いうと もどる）',hint:'にゃーんが だいすきな ひとの ことば。「ねこ○○○○」',
+  f:function(){S.ura.cats=S.ura.cats?0:1;initCritters();sfx('meow');return S.ura.cats?['ねこが いっぱい！','なでると よろこぶよ']:['ねこたちは おうちに かえったよ','']}},
+ {id:'yuki',codes:['ゆきふれ'],name:'ゆき ふれ',what:'どの きせつでも ゆきが ふる（もういちど いうと もどる）',hint:'さむい ひに そらから ふってほしい もの。「○○ふれ」',
+  f:function(){S.ura.snow=S.ura.snow?0:1;return S.ura.snow?['ゆきが ふってきた！','もういちど いうと やむよ']:['ゆきが やんだよ','']}},
+ {id:'niji',codes:['にじいろ','にじ'],name:'にじいろ',what:'そらに にじが でる（もういちど いうと きえる）',hint:'あめの あとの そらに でる 7いろの もの。「○○いろ」',
+  f:function(){S.ura.niji=S.ura.niji?0:1;return S.ura.niji?['にじが でた！','']:['にじが きえたよ','']}},
+ {id:'kanta',codes:['かんた','かんたくん','かんたてんちょう'],name:'かんた てんちょう',what:'かんた てんちょうを みんなで おいわい（はじめては 7,777コイン）',hint:'おにいちゃんの なまえ',
+  f:function(){if(!S.ura.kantaPay){S.ura.kantaPay=1;addMoney(7777);bumpMoney()}confetti(160);return ['かんた てんちょう ばんざーい！','まちの みんなが よろこんでいるよ']}},
+ {id:'youta',codes:['ようた','ようたくん','ようたてんちょう'],name:'ようた てんちょう',what:'ようた てんちょうを みんなで おいわい（はじめては 7,777コイン）',hint:'おとうとの なまえ',
+  f:function(){if(!S.ura.youtaPay){S.ura.youtaPay=1;addMoney(7777);bumpMoney()}confetti(160);return ['ようた てんちょう ばんざーい！','まちの みんなが よろこんでいるよ']}},
+ {id:'arigato',codes:['ありがとう'],name:'ありがとう',what:'まちの みんなから おてがみが とどく',hint:'うれしい ときに いう ことば',
+  f:function(){confetti(60);setTimeout(function(){dlg('まちの みんなより','<p>いつも まちを たいせつに してくれて ありがとう！<br>てんちょうの おかげで まいにち たのしいよ。<br>これからも よろしくね！</p>',[{t:'どういたしまして！',c:'go'}])},300);return null}},
+ {id:'coin',name:'コインの あめ',what:'うえの コインを はやく 7かい タップすると コインが ふる（777コインは 1にち 1かい）',hint:'うえの コインの ところを、はやく なんかいも タップ…',day:1,
+  f:function(){addMoney(777);bumpMoney();for(var i=0;i<6;i++)setTimeout(function(){if(S)coinFly(cam.x+(rnd()-0.5)*200,cam.y+(rnd()-0.5)*120,6)},i*120);return ['コインの あめ！','+777コイン']}},
+ {id:'sea',name:'きせつの ふぶき',what:'うえの きせつを はやく 5かい タップすると、きせつの かみふぶき',hint:'うえの きせつの ところを、はやく なんかいも タップ…',
+  f:function(){var c={spring:['#ffc0d8','#ff9ab8','#ffe0ec'],summer:['#4fa3ff','#ffd24a','#ffffff'],autumn:['#e05a2a','#ff8a1a','#e0a020'],winter:['#ffffff','#cfe8ff','#9fd8ff']}[curSeason()[0]];for(var i=0;i<120;i++)addPart({sp:'s',x:rnd()*cvW,y:-10*dpr-rnd()*cvH*0.3,vx:(rnd()-0.5)*80*dpr,vy:(60+rnd()*120)*dpr,g:30*dpr,t:0,life:2.6+rnd(),c:pick(c),z:1});return [SEA_ICON[curSeason()[0]]+' '+curSeason()[1]+'の ふぶき！','']}},
+ {id:'gift',name:'ひみつの おこづかい',what:'メニューの「かきだす」の ひだりの なにも ない ところを タップ',hint:'メニューの なかの、なにも ない ところ…？'}
+];
+var URABY={};URA.forEach(function(u){URABY[u.id]=u});
+function uraNorm(t){return String(t||'').replace(/[ァ-ヶ]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0x60)}).replace(/[\s　!！?？。、．,・~〜♪☆★]/g,'')}
+function uraRun(id,quiet){uraFix();var u=URABY[id];if(!u)return false;
+  if(u.day&&S.ura.used[id]===S.day){toast('この うらわざは きょうは もう つかったよ。あしたまた ためしてね','bad');return false}
+  if(u.ok){var ok=u.ok();if(ok!==true){toast(ok,'bad');return false}}
+  var first=!S.ura.found[id];S.ura.found[id]=1;if(u.day)S.ura.used[id]=S.day;
+  var r=u.f?u.f():null;sfx('star');if(first)confetti(50);
+  if(r)banner((first?'うらわざ はっけん！ ':'')+r[0],r[1],'#b04aff');else if(first)toast('うらわざ はっけん！「'+u.name+'」','gold');
+  saveSoon();if(UI.sheet&&UI.sheet.kind==='menu')renderSheet();return true}
+function uraSay(txt){var n=uraNorm(txt);if(!n){toast('ひみつの ことばを いれてね','bad');return}
+  for(var i=0;i<URA.length;i++){var u=URA[i];if(u.codes&&u.codes.indexOf(n)>=0){uraRun(u.id);return}}
+  sfx('click');toast(pick(['なにも おこらなかった…','うーん、ちがう みたい','ざんねん！ ほかの ことばを ためしてね']),'bad')}
+function uraBook(){uraFix();var n=0,b='';URA.forEach(function(u){var f=!!S.ura.found[u.id];if(f)n++;
+    b+='<div class="row" style="align-items:flex-start"><div class="stk" style="font-size:22px;min-width:2ch">'+(f?'★':'？')+'</div><div class="grow"><div class="nm">'+(f?u.name+(u.codes?'（ことば：「'+u.codes[0]+'」）':''):'？？？')+'</div><div class="sub">'+(f?u.what:'ヒント：'+u.hint)+'</div></div></div>'});
+  dlg('うらわざ てちょう（'+n+'/'+URA.length+'）','<p class="note">みつけた うらわざは ここに きろく されるよ。ヒントを みて さがしてね！</p>'+b,[{t:'とじる',c:'go'}])}
+function uraCount(){uraFix();var n=0;URA.forEach(function(u){if(S.ura.found[u.id])n++});return n}
+function drawNiji(t){var cx=cvW/2,cy=cvH*1.05,R=Math.min(cvW,cvH*1.6)*0.62,w=Math.max(6,R*0.035),cols=['#ff4a4a','#ff9a3a','#ffe04a','#62d27a','#4fa3ff','#4a56d8','#b04aff'];
+  ctx.save();ctx.globalAlpha=0.32+0.06*Math.sin(t*1.5);ctx.lineWidth=w;for(var i=0;i<7;i++){ctx.strokeStyle=cols[i];ctx.beginPath();ctx.arc(cx,cy,R-i*w,Math.PI,Math.PI*2);ctx.stroke()}ctx.restore()}
+var uraTaps={};function uraTap(k,need,id){var now=performance.now(),a=uraTaps[k]=(uraTaps[k]||[]).filter(function(x){return now-x<3000});a.push(now);if(a.length>=need){uraTaps[k]=[];uraRun(id)}}
 SHEETS.menu=function(){
   var b='';
   b+='<div class="sec">セーブ</div><p class="note">じどうセーブ：いきている（さいご '+when(lastSave)+'）<br>クラウド：'+(CLOUD.state==='ok'?'つかえる（ゲームごとに べつべつに ほぞん。ほかの たんまつでも つづきが できる）'+(CLOUD.last?'・さいご '+when(CLOUD.last):''):CLOUD.state==='wait'?'しらべ中…':'この ばしょでは つかえない')+'</p>';
   b+='<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn go" data-act="saveNow">いますぐ セーブ</button><button class="btn" data-act="toTitle">あそぶ ひとを かえる（いまは '+escH(slotName(SLOT))+'）</button><button data-act="gift" aria-label="ひみつ" style="width:56px;min-height:50px;background:transparent;border:none;padding:0;margin:0"></button><button class="btn gold" data-act="export">ファイルに かきだす</button><button class="btn" data-act="exportText">テキストで かきだす</button></div>';
   b+='<div class="sec">よみこみ</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="importFile">ファイルから よみこむ</button><button class="btn" data-act="importPaste">テキストを はりつけて よみこむ</button>'+(CLOUD.games.length?'<button class="btn" data-act="cloudLoad">クラウドから よみこむ（'+CLOUD.games.length+'）</button>':'')+'<button class="btn" data-act="restorePrev">ひとつまえの データに もどす</button><button class="btn gold" data-act="tm">タイムマシン（まえに もどす）</button></div>';
   b+='<div class="sec">せってい</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="spd">はやさ：×'+S.speed+'</button><button class="btn '+(UI.paused?'on':'')+'" data-act="pause">'+(UI.paused?'じかんを うごかす':'じかんを とめる')+'</button><button class="btn '+(S.set.bgm?'on':'')+'" data-act="bgm">おんがく：'+(S.set.bgm?'オン':'オフ')+'</button><button class="btn '+(S.set.snd?'on':'')+'" data-act="snd">こうかおん：'+(S.set.snd?'オン':'オフ')+'</button><button class="btn" data-act="help">あそびかた</button><button class="btn" data-act="toTitle">タイトルへ</button></div>';
-  b+='<div class="sec">じゅんび中（まだ あそべません）</div><p class="note">・たんけん：なかまを とおくの とちへ おくって ざいりょうを みつける<br>・きせつの イベント（はる・なつ・あき・ふゆ）<br></p>';
+  b+='<div class="sec">うらわざ</div><p class="note">ひみつの ことばを いれて「となえる」を おしてね。ほかにも ひみつの タップが あるかも…？</p><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input id="uraIn" maxlength="20" placeholder="ひみつの ことば" autocomplete="off" style="flex:1;min-width:160px;font-size:18px;padding:10px;border-radius:8px;border:2px solid var(--dim);background:var(--night);color:var(--line);-webkit-user-select:text;user-select:text"><button class="btn gold" data-act="ura">となえる</button><button class="btn" data-act="uraBook">うらわざ てちょう（'+uraCount()+'/'+URA.length+'）</button></div>';
+  b+='<div class="sec">じゅんび中（まだ あそべません）</div><p class="note">・たんけん：なかまを とおくの とちへ おくって ざいりょうを みつける</p>';
   b+='<div class="sec">あぶない そうさ</div><button class="btn bad" data-act="newGame">はじめから あそぶ</button><p class="note">まちがえて けさないように、2かい たしかめるよ。</p>';
   return ['メニュー','',b];
 };
@@ -2910,7 +2966,9 @@ function onAct(e){
   case 'bgm':audioInit();S.set.bgm=S.set.bgm?0:1;renderSheet();hud();break;
   case 'reroll':refreshCand();renderSheet();break;
   case 'xslot':{var xc=xslotCost();if(S.money<xc){toast(REASON.money,'bad');break}S.money-=xc;S.xslot=(S.xslot||0)+1;toast('なかまの わくが '+staffSlots()+'人に なった！','good');sfx('buy');saveSoon();renderSheet();break}
-  case 'gift':addMoney(100000);bumpMoney();coinFly(cam.x,cam.y,8);sfx('star');toast('ひみつの おこづかい +100,000コイン！','gold');saveSoon();break;
+  case 'ura':{var ui=$('#uraIn');uraSay(ui?ui.value:'');var ui2=$('#uraIn');if(ui2)ui2.value='';break}
+  case 'uraBook':uraBook();break;
+  case 'gift':uraFix();if(!S.ura.found.gift){S.ura.found.gift=1;toast('うらわざ はっけん！「ひみつの おこづかい」','gold')}addMoney(100000);bumpMoney();coinFly(cam.x,cam.y,8);sfx('star');toast('ひみつの おこづかい +100,000コイン！','gold');saveSoon();break;
   case 'tm':openTM();break;
   case 'autoShops':{var an=+a,al2=autoShopsList();if(an>=999&&al2.length>10){dlg('ぜんぶ たてる？','<p>まだ ない おみせを '+al2.length+'しゅるい、あいている ところに たてるよ。コインや とちが たりなく なったら そこで とまるよ。</p>',[{t:'たてる',c:'gold',f:function(){autoShops(999)}},{t:'やめる'}])}else autoShops(an);break}
   case 'evClaim':evClaim(a);renderSheet();break;
@@ -3057,6 +3115,7 @@ cv.addEventListener('pointerup',ptrEnd);cv.addEventListener('pointercancel',ptrE
 cv.addEventListener('wheel',function(e){e.preventDefault();setZoom(cam.z*(e.deltaY<0?1.12:0.89))},{passive:false});
 document.addEventListener('gesturestart',function(e){e.preventDefault()});
 document.addEventListener('dblclick',function(e){e.preventDefault()},{passive:false});
+document.addEventListener('keydown',function(e){if(e.target&&e.target.id==='uraIn'&&e.key==='Enter'){e.preventDefault();uraSay(e.target.value);var ui=$('#uraIn');if(ui){ui.value='';ui.blur()}}});
 function tapAt(sx,sy){
   if(modalOpen()||!S)return;var w=screenToWorld(sx,sy),tx=Math.floor(w.x/TS),ty=Math.floor(w.y/TS);if(tx<0||ty<0||tx>=MW||ty>=MH)return;
   if(!UI.mode&&tapFun(w.x,w.y))return;
@@ -3304,7 +3363,8 @@ function tapFun(wx,wy){
   return false}
 function setMoneyNow(){if(!S)return;dispMoney=S.money;$('#vMoney').textContent=fmt(S.money)}
 function initCritters(){CRIT=[];CACHE.comboKnown=null;if(!S)return;setMoneyNow();if(!S.home.told&&!S.__demo&&!UI.title){S.home.told=1;setTimeout(function(){banner('じぶんの いえ が たてられるよ！','ひだりの「いえ」ボタンから','#ff8a3a')},2600)}else if(!S.stgTold&&S.pubTold&&!S.__demo&&!UI.title){S.stgTold=1;setTimeout(function(){banner('あたらしい ステージが できたよ！','ひだりの「ステージ」ボタンから','#3a8ad8')},2600)}else if(!S.pubTold&&!S.__demo&&!UI.title){S.pubTold=1;setTimeout(function(){banner('がっこうや びょういんが たてられるよ！','「たてる」→「まち」から','#4a9aff')},2600)}for(var i=0;i<8;i++){var p=randTileAny();if(p)CRIT.push({k:'bf',hx:p[0]*TS+8,hy:p[1]*TS+8,x:p[0]*TS,y:p[1]*TS,ph:rnd()*9,c:pick(['#ffffff','#ffd24a','#ff9ad5','#9fd8ff','#ff9a3a']),mv:0})}
-  ['cat','dog','cat'].forEach(function(k,i){var p=randTileAny();if(p)CRIT.push({k:k,x:p[0]*TS+8,y:p[1]*TS+12,tx:p[0],ty:p[1],dir:1,wait:rnd()*3,an:0,col:k==='cat'?pick(['#f0a040','#ffffff','#5a5a6a']):pick(['#c08040','#f0e0c0','#8a5a3a']),love:0})})}
+  ['cat','dog','cat'].forEach(function(k,i){var p=randTileAny();if(p)CRIT.push({k:k,x:p[0]*TS+8,y:p[1]*TS+12,tx:p[0],ty:p[1],dir:1,wait:rnd()*3,an:0,col:k==='cat'?pick(['#f0a040','#ffffff','#5a5a6a']):pick(['#c08040','#f0e0c0','#8a5a3a']),love:0})});
+  if(S.ura&&S.ura.cats)for(var nc=0;nc<10;nc++){var pc=randTileAny();if(pc)CRIT.push({k:'cat',x:pc[0]*TS+8,y:pc[1]*TS+12,tx:pc[0],ty:pc[1],dir:1,wait:rnd()*3,an:0,col:pick(['#f0a040','#ffffff','#5a5a6a','#3a3a44','#e8c080']),love:0})}}
 function randTileAny(){for(var k=0;k<60;k++){var L=LANDS[landGrid[0]];var x=ri(1,MW-2),y=ri(1,MH-2);if(landUnlocked(x,y)&&walkable(x,y))return [x,y]}return null}
 function stepCritters(dt,t){
   CRIT.forEach(function(c){
@@ -3447,7 +3507,7 @@ function render(t){
   if(S.event==='fest'){for(var f=0;f<24;f++){var fx2=f*(cvW/24)+(cvW/48);ctx.fillStyle=['#ff6b6b','#ffd24a','#4fa3ff','#62d27a'][f%4];ctx.beginPath();ctx.moveTo(fx2-10*dpr,0);ctx.lineTo(fx2+10*dpr,0);ctx.lineTo(fx2,16*dpr);ctx.fill()}}
 }
 
-function drawSeason(t){if(S&&UI.groundSea!==undefined&&UI.groundSea!==seasonIdx(S.day))groundDirty=true;if(!S||S.__demo&&UI.title&&false)return;var si=seasonIdx(S.day),th=curStage().theme;if(th==='space'||(THEMES2[th]&&/stars|lava|water|crystal|grid/.test(THEMES2[th].pat)))return;
+function drawSeason(t){if(S&&S.ura&&S.ura.niji)drawNiji(t);if(S&&UI.groundSea!==undefined&&UI.groundSea!==seasonIdx(S.day))groundDirty=true;if(!S||S.__demo&&UI.title&&false)return;var si=S.ura&&S.ura.snow?3:seasonIdx(S.day),th=curStage().theme;if(th==='space'||(THEMES2[th]&&/stars|lava|water|crystal|grid/.test(THEMES2[th].pat)))return;
   var tint=['rgba(255,170,210,.06)','rgba(255,240,150,.05)','rgba(230,120,40,.09)','rgba(210,230,255,.13)'][si];ctx.fillStyle=tint;ctx.fillRect(0,0,cvW,cvH);
   var n=si===3?(S.event==='rain'?110:55):si===1?18:40,d=dpr;
   for(var i=0;i<n;i++){var sp=si===3?40:si===1?8:28,sw=Math.sin(t*1.3+i)*14*d;
@@ -3557,7 +3617,7 @@ try{var HOT=window.claude&&window.claude.hot;if(HOT&&typeof HOT.snapshot==='func
 (function(){var H=window.claude&&window.claude.hot;if(H&&typeof H.ready==='function'){var done=false;try{H.ready(function(d){if(!done){done=true;boot(d||{})}})}catch(e){}setTimeout(function(){if(!done){done=true;boot({})}},1500)}else boot((H&&H.data)||{})})();
 
 // test hook (read-only helpers for automated checks)
-window.__K={evTick:function(){evTick()},evClaim:function(i){return evClaim(i)},EVDEFS:EVDEFS,openSheet:function(a,b,c){openSheet(a,b,c)},pubURL:function(k,f){return pubCv(k,f||0).toDataURL()},PUBK:PUBK,get PART(){return PART},get DROPS(){return DROPS},get CRIT(){return CRIT},spawnDrop:spawnDrop,addFever:addFever,BGM:BGM,shopURL:function(){return shopCv("pan",5).toDataURL()},spawn:spawnCustomer,get S(){return S},get CUST(){return CUST},UI:UI,startJob:startJob,tapAt:tapAt,RECIPES:RECIPES,TPL:TPL,checkPlace:checkPlace,saveLocal:saveLocal,loadLocal:loadLocal,doResearch:doResearch,endDay:endDay,cam:cam,CACHE:CACHE,recomputeStats:recomputeStats,gainExp:gainExp,tileToScreen:function(tx,ty){var s=scaleDev();return {x:((tx*TS+8-cam.x)*s+cvW/2)/dpr,y:((ty*TS+8-cam.y)*s+cvH/2)/dpr}}};
+window.__K={uraSay:function(t){uraSay(t)},uraRun:function(i){return uraRun(i)},URA:URA,evTick:function(){evTick()},evClaim:function(i){return evClaim(i)},EVDEFS:EVDEFS,openSheet:function(a,b,c){openSheet(a,b,c)},pubURL:function(k,f){return pubCv(k,f||0).toDataURL()},PUBK:PUBK,get PART(){return PART},get DROPS(){return DROPS},get CRIT(){return CRIT},spawnDrop:spawnDrop,addFever:addFever,BGM:BGM,shopURL:function(){return shopCv("pan",5).toDataURL()},spawn:spawnCustomer,get S(){return S},get CUST(){return CUST},UI:UI,startJob:startJob,tapAt:tapAt,RECIPES:RECIPES,TPL:TPL,checkPlace:checkPlace,saveLocal:saveLocal,loadLocal:loadLocal,doResearch:doResearch,endDay:endDay,cam:cam,CACHE:CACHE,recomputeStats:recomputeStats,gainExp:gainExp,tileToScreen:function(tx,ty){var s=scaleDev();return {x:((tx*TS+8-cam.x)*s+cvW/2)/dpr,y:((ty*TS+8-cam.y)*s+cvH/2)/dpr}}};
 })();
 </script>
 
