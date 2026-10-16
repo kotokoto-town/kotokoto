@@ -199,7 +199,7 @@ textarea{width:100%;box-sizing:border-box;min-height:110px;background:var(--nigh
   <button id="guide" class="win" hidden></button>
   <div id="rot" class="win">よこむきに すると あそびやすいよ</div>
   <div id="zoom"><button class="win" data-z="1" aria-label="ズームイン">＋</button><button class="win" data-z="-1" aria-label="ズームアウト">－</button><button class="win" data-z="0" aria-label="まんなかへ">◎</button></div>
-  <div id="buildbar" class="win" hidden><div id="bbInfo"></div><button class="btn go" id="bbOk">ここに たてる</button><button class="btn" id="bbNo">やめる</button></div>
+  <div id="buildbar" class="win" hidden><div id="bbInfo"></div><button class="btn go" id="bbOk">ここに たてる</button><button class="btn" id="bbQuick">すぐ おく：オン</button><button class="btn" id="bbNo">やめる</button></div>
   <aside id="sheet" class="win" aria-hidden="true">
     <div id="shHead"><h2 id="shTitle"></h2><button class="btn" id="shClose">とじる</button></div>
     <div id="shTabs"></div>
@@ -2511,10 +2511,27 @@ function bCard(kind,type){
   var locked=S.lv<lv;
   return '<button class="card '+(locked?'lock':'')+'" data-act="'+(locked?'locked':'place')+'" data-a="'+kind+'" data-b="'+type+'" data-cost="'+cost+'"><img src="'+img+'" alt=""><div class="nm">'+name+'</div><div class="sub">'+(locked?'レベル'+lv+'で かいほう':desc+extra)+'</div><div class="pr">'+fmt(cost)+'</div></button>';
 }
+
+/* まとめて たてる：まだ ない おみせを あいている ところに じどうで */
+function autoSpot(w,h,kind,type){var c0x=30,c0y=20,best=null;
+  var free=function(x,y){for(var yy=y;yy<y+h;yy++)for(var xx=x;xx<x+w;xx++){if(xx<0||yy<0||xx>=MW||yy>=MH)return false;var i=yy*MW+xx;if(occ[i]||roadG[i]||isMainRoad(xx,yy)||!landUnlocked(xx,yy))return false}return true};
+  var cand=[];for(var y=0;y<=MH-h;y++)for(var x=0;x<=MW-w;x++)if(free(x,y))cand.push([x,y,(x-c0x)*(x-c0x)+(y-c0y)*(y-c0y)*1.6]);
+  cand.sort(function(a,b){return a[2]-b[2]});
+  for(var k=0;k<cand.length&&k<400;k++){var q={kind:kind,type:type,w:w,h:h,x:cand[k][0],y:cand[k][1],move:0};if(checkPlace(q).ok)return q}return null}
+function autoShopsList(){return SHOPS.filter(function(d){return S.lv>=d.lv&&!countShop(d.id)})}
+function autoShops(n){var list=autoShopsList().sort(function(a,b){return shopCost(a.id)-shopCost(b.id)}),made=0,spent=0,why='';
+  for(var i=0;i<list.length&&made<n;i++){var d=list[i],c=shopCost(d.id);if(S.money<c){why='money';break}
+    var q=autoSpot(3,3,'shop',d.id);if(!q){why='space';break}
+    S.money-=c;spent+=c;var sh=newShop(d.id,q.x,q.y);S.shops.push(sh);learnStarters(d.id);rebuildOcc();made++}
+  if(made){fillReq();afterMapChange();saveSoon();sfx('lv');confetti(60);banner(made+'けん たてたよ！',fmt(spent)+'コイン つかったよ','#ff8a3a')}
+  if(!made)toast(why==='money'?REASON.money:why==='space'?'あいている とちが ないよ。とちを かってね':'たてられる おみせが ないよ','bad');
+  else if(why==='space')toast('とちが いっぱいに なったよ。あたらしい とちを かうと もっと たてられるよ','bad');
+  else if(why==='money')toast('コインが たりなく なったので ここまで','bad');
+  renderSheet()}
 SHEETS.build=function(sh){
   var tab=sh.tab||'shop';sh.tab=tab;var b='';
   b+='<button class="btn '+(UI.mode==='remove'?'on':'')+'" data-act="removeMode">'+(UI.mode==='remove'?'かたづけモード：オン（タップで けす）':'かたづけモード（おいた ものを けす）')+'</button>';
-  if(tab==='shop'){b+='<div class="grid">'+SHOPS.map(function(d){return bCard('shop',d.id)}).join('')+'</div>'}
+  if(tab==='shop'){var al=autoShopsList();if(al.length)b+='<div class="row" style="flex-wrap:wrap"><div class="grow" style="min-width:180px"><div class="nm">まとめて たてる</div><div class="sub">まだ ない おみせ（'+al.length+'しゅるい）を、あいている ところに じどうで たてるよ。やすい じゅん。</div></div>'+[[5,'5けん'],[10,'10けん'],[999,'ぜんぶ']].map(function(z){return '<button class="btn pm gold" data-act="autoShops" data-a="'+z[0]+'">'+z[1]+'</button>'}).join('')+'</div>';b+='<div class="grid">'+SHOPS.map(function(d){return bCard('shop',d.id)}).join('')+'</div>'}
   else if(tab==='deco'){b+='<p class="note">かざりの ちかくの おみせは おきゃくさんが ふえるよ。とくべつな くみあわせで コンボも！</p><div class="grid">'+['road','bed','bench','lamp','tree','fount','statue','park','gold'].map(function(k){return bCard('obj',k)}).join('')+'</div>'}
   else if(tab==='farm'){b+='<p class="note">のうじょうは ざいりょうを じどうで つくって くれるよ。おなじ のうじょうを ふやすと もっと はやく あつまる。</p><div class="grid">'+['soko'].concat(MATS.map(function(m){return 'f_'+m[0]})).map(function(k){return bCard('obj',k)}).join('')+'</div>'}
   else if(tab==='mine'){var ml=S.cbld||[];b+='<button class="btn gold" data-act="cbOpen">＋ じぶんで たてものを かく</button><p class="note">じぶんで かいた たてものを まちに おけるよ。'+(ml.length?'':'まだ ないよ。うえの ボタンから かいてみよう！')+'</p><div class="grid">'+ml.filter(function(d){return OBJ[d.id]}).map(function(d){return bCard('obj',d.id)}).join('')+'</div>'}
@@ -2895,6 +2912,7 @@ function onAct(e){
   case 'xslot':{var xc=xslotCost();if(S.money<xc){toast(REASON.money,'bad');break}S.money-=xc;S.xslot=(S.xslot||0)+1;toast('なかまの わくが '+staffSlots()+'人に なった！','good');sfx('buy');saveSoon();renderSheet();break}
   case 'gift':addMoney(100000);bumpMoney();coinFly(cam.x,cam.y,8);sfx('star');toast('ひみつの おこづかい +100,000コイン！','gold');saveSoon();break;
   case 'tm':openTM();break;
+  case 'autoShops':{var an=+a,al2=autoShopsList();if(an>=999&&al2.length>10){dlg('ぜんぶ たてる？','<p>まだ ない おみせを '+al2.length+'しゅるい、あいている ところに たてるよ。コインや とちが たりなく なったら そこで とまるよ。</p>',[{t:'たてる',c:'gold',f:function(){autoShops(999)}},{t:'やめる'}])}else autoShops(an);break}
   case 'evClaim':evClaim(a);renderSheet();break;
   case 'lifeGo':lifeGo(+a);break;
   case 'cfOpen':UI.cfBack=UI.sheet?{k:UI.sheet.kind,a:UI.sheet.arg,t:UI.sheet.tab}:null;cfNew();openSheet('cfurn');break;
@@ -2991,8 +3009,9 @@ function commitPlace(){
   if(!p.move&&p.kind==='obj'&&OBJ[p.type].max&&countObj(p.type)>=OBJ[p.type].max){toast('これは '+OBJ[p.type].max+'つまで だよ','bad');cancelPlace();return}
   S.money-=cost;
   if(p.move){var o=byId(p.move);o.x=p.x;o.y=p.y;toast('いどうしたよ','good');cancelPlace()}
-  else if(p.kind==='shop'){var s=newShop(p.type,p.x,p.y);S.shops.push(s);learnStarters(p.type);toast(SHOPBY[p.type].name+' が できた！','gold');sfx('lv');cancelPlace();fillReq();afterMapChange();openSheet('shop',s.id)}
-  else{S.objs.push({id:S.nid++,k:p.type,x:p.x,y:p.y});sfx('buy');if(p.w===1&&p.h===1){afterMapChange();showBuildBar();saveSoon();return}toast(OBJ[p.type].name+' を おいたよ','good');cancelPlace()}
+  else if(p.kind==='shop'){var s=newShop(p.type,p.x,p.y);S.shops.push(s);learnStarters(p.type);toast(SHOPBY[p.type].name+' が できた！','gold');sfx('lv');cancelPlace();fillReq();afterMapChange();if(quickOn())openSheet('build',null,'shop');else openSheet('shop',s.id)}
+  else{S.objs.push({id:S.nid++,k:p.type,x:p.x,y:p.y});sfx('buy');if(p.w===1&&p.h===1){afterMapChange();showBuildBar();saveSoon();return}toast(OBJ[p.type].name+' を おいたよ','good');
+    var mx=OBJ[p.type].max;if(mx&&countObj(p.type)>=mx){cancelPlace()}else{afterMapChange();saveSoon();showBuildBar();return}}
   afterMapChange();saveSoon();
 }
 function removeObj(o){if(!o)return;var d=OBJ[o.k];
@@ -3003,11 +3022,14 @@ function hideBuildBar(){$('#buildbar').hidden=true}
 function updBuildBar(){
   if(UI.mode==='remove'){$('#bbInfo').innerHTML='<b class="pix">かたづけモード</b><br>けしたい ものを タップ（おみせは メニューから）';$('#bbOk').hidden=true;$('#bbNo').textContent='おわる';return}
   var p=UI.place;if(!p)return;var chk=checkPlace(p),cost=placeCost(p);var name=p.kind==='shop'?SHOPBY[p.type].name:OBJ[p.type].name;
-  var one=p.w===1&&p.h===1&&!p.move;
-  $('#bbInfo').innerHTML='<b class="pix">'+name+'</b> '+(cost?fmt(cost)+'コイン':'')+'<br>'+(chk.ok?(one?'おきたい ばしょを タップ（つづけて おけるよ）':'ばしょを タップして えらんでね'):'<span class="why">'+chk.why+'</span>');
+  var q=quickOn()&&!p.move,one=(p.w===1&&p.h===1&&!p.move)||q;
+  $('#bbInfo').innerHTML='<b class="pix">'+name+'</b> '+(cost?fmt(cost)+'コイン':'')+'<br>'+(chk.ok||q?(one?'おきたい ばしょを タップすると すぐ たつよ（どんどん おけるよ）':'ばしょを タップして えらんでね'):'<span class="why">'+chk.why+'</span>');
+  var bq=$('#bbQuick');bq.hidden=!!p.move;bq.textContent='すぐ おく：'+(quickOn()?'オン':'オフ');bq.classList.toggle('on',quickOn());
   $('#bbOk').hidden=one;$('#bbOk').disabled=!chk.ok;$('#bbOk').textContent=p.move?'ここに いどう':'ここに たてる';$('#bbNo').textContent=one?'おわる':'やめる';
 }
 $('#bbOk').onclick=function(){sfx('click');commitPlace()};
+function quickOn(){return !S||!S.set||S.set.quick!==0}
+$('#bbQuick').onclick=function(){sfx('click');if(!S)return;S.set.quick=quickOn()?0:1;saveSoon();updBuildBar()};
 $('#bbNo').onclick=function(){sfx('click');cancelPlace();UI.mode=null;hideBuildBar()};
 
 /* ================= camera & input ================= */
@@ -3040,6 +3062,7 @@ function tapAt(sx,sy){
   if(!UI.mode&&tapFun(w.x,w.y))return;
   if(UI.mode==='place'){var p=UI.place;p.x=clamp(tx-Math.floor(p.w/2),0,MW-p.w);p.y=clamp(ty-Math.floor(p.h/2),0,MH-p.h);
     if(p.w===1&&p.h===1&&!p.move){p.x=tx;p.y=ty;if(checkPlace(p).ok){if(S.money<placeCost(p)){toast(REASON.money,'bad')}else commitPlace();return}}
+    else if(!p.move&&quickOn()){var qc=checkPlace(p);if(qc.ok){if(S.money<placeCost(p))toast(REASON.money,'bad');else commitPlace();return}toast(qc.why,'bad')}
     updBuildBar();return}
   if(UI.mode==='remove'){var o=objAt(tx,ty);if(!o){var rd=S.objs.filter(function(x){return x.k==='road'&&x.x===tx&&x.y===ty})[0];if(rd){S.objs.splice(S.objs.indexOf(rd),1);afterMapChange();saveSoon();return}toast('ここには なにも ないよ');return}
     if(o.type){toast('おみせは おみせの「じょうほう」から とりこわせるよ');return}removeObj(o);return}
