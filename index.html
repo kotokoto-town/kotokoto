@@ -2531,7 +2531,7 @@ function autoShops(n){var list=autoShopsList().sort(function(a,b){return shopCos
 SHEETS.build=function(sh){
   var tab=sh.tab||'shop';sh.tab=tab;var b='';
   b+='<button class="btn '+(UI.mode==='remove'?'on':'')+'" data-act="removeMode">'+(UI.mode==='remove'?'かたづけモード：オン（タップで けす）':'かたづけモード（おいた ものを けす）')+'</button>';
-  if(tab==='shop'){var al=autoShopsList();if(al.length)b+='<div class="row" style="flex-wrap:wrap"><div class="grow" style="min-width:180px"><div class="nm">まとめて たてる</div><div class="sub">まだ ない おみせ（'+al.length+'しゅるい）を、あいている ところに じどうで たてるよ。やすい じゅん。</div></div>'+[[5,'5けん'],[10,'10けん'],[999,'ぜんぶ']].map(function(z){return '<button class="btn pm gold" data-act="autoShops" data-a="'+z[0]+'">'+z[1]+'</button>'}).join('')+'</div>';b+='<div class="grid">'+SHOPS.map(function(d){return bCard('shop',d.id)}).join('')+'</div>'}
+  if(tab==='shop'){var al=autoShopsList();if(al.length)b+='<div class="row" style="flex-wrap:wrap"><div class="grow" style="min-width:180px"><div class="nm">まとめて たてる</div><div class="sub">まだ ない おみせ（'+al.length+'しゅるい）を、あいている ところに じどうで たてるよ。やすい じゅん。</div></div>'+[[5,'5けん'],[10,'10けん'],[999,'ぜんぶ']].map(function(z){return '<button class="btn pm gold" data-act="autoShops" data-a="'+z[0]+'">'+z[1]+'</button>'}).join('')+'</div>';b+=sortBar('sortBld',SORT_BLD)+'<div class="grid">'+sortList(SHOPS,'sortBld',SORT_BLDF).map(function(d){return bCard('shop',d.id)}).join('')+'</div>'}
   else if(tab==='deco'){b+='<p class="note">かざりの ちかくの おみせは おきゃくさんが ふえるよ。とくべつな くみあわせで コンボも！</p><div class="grid">'+['road','bed','bench','lamp','tree','fount','statue','park','gold'].map(function(k){return bCard('obj',k)}).join('')+'</div>'}
   else if(tab==='farm'){b+='<p class="note">のうじょうは ざいりょうを じどうで つくって くれるよ。おなじ のうじょうを ふやすと もっと はやく あつまる。</p><div class="grid">'+['soko'].concat(MATS.map(function(m){return 'f_'+m[0]})).map(function(k){return bCard('obj',k)}).join('')+'</div>'}
   else if(tab==='mine'){var ml=S.cbld||[];b+='<button class="btn gold" data-act="cbOpen">＋ じぶんで たてものを かく</button><p class="note">じぶんで かいた たてものを まちに おけるよ。'+(ml.length?'':'まだ ないよ。うえの ボタンから かいてみよう！')+'</p><div class="grid">'+ml.filter(function(d){return OBJ[d.id]}).map(function(d){return bCard('obj',d.id)}).join('')+'</div>'}
@@ -2670,9 +2670,23 @@ function cbSave(){var e=UI.cb;if(!e||!e.art||!artUsed(e.art))return;var nm=cpSli
   regCBld(S);BCV={};statsDirty=true;saveSoon();renderEdState()}
 function cbDelete(id){var d=(S.cbld||[]).filter(function(x){return x.id===id})[0];if(!d)return;if(countObj(id)){toast('まちに おいてある ぶんを かたづけてから けしてね','bad');return}
   dlg(escH(OBJ[id]?OBJ[id].name:'たてもの')+' を けす？','<p>かいた えも なくなるよ。</p>',[{t:'けす',c:'bad',f:function(){S.cbld.splice(S.cbld.indexOf(d),1);if(UI.cb&&UI.cb.id===id)cbNew();saveSoon();renderSheet()}},{t:'やめる'}])}
+
+/* ===== ならびかえ（おみせ いちらん・たてる） ===== S.set[key] = 'name' / 'name-'（ぎゃく） */
+function sortBar(key,opts){var cur=(S.set&&S.set[key])||'def',rev=cur.slice(-1)==='-',ck=rev?cur.slice(0,-1):cur;
+  return '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:6px 0"><span class="pix" style="color:var(--dim)">ならびかえ：</span>'+opts.map(function(o){var on=o[0]===ck;return '<button class="btn pm'+(on?' on':'')+'" data-act="sortSet" data-a="'+key+'" data-b="'+o[0]+'">'+o[1]+(on&&o[0]!=='def'?(rev?' ▲':' ▼'):'')+'</button>'}).join('')+'</div>'}
+function sortSet(key,v){var cur=S.set[key]||'def';S.set[key]=(v!=='def'&&cur===v)?v+'-':v;saveSoon();renderSheet()}
+function jaCmp(a,b){return String(a).localeCompare(String(b),'ja')}
+function sortList(arr,key,fns){var cur=(S.set&&S.set[key])||'def',rev=cur.slice(-1)==='-',k=rev?cur.slice(0,-1):cur,f=fns[k];var a=arr.slice();
+  if(f){a=a.map(function(x,i){return [x,i]});a.sort(function(p,q){var r=f(p[0],q[0]);return (rev?-r:r)||p[1]-q[1]});a=a.map(function(p){return p[0]})}return a}
+var SORT_OWN=[['def','たてた じゅん'],['name','なまえ'],['lv','レベル'],['rev','うりあげ'],['stock','ざいこ']];
+var SORT_OWNF={name:function(a,b){return jaCmp(SHOPBY[a.type].name,SHOPBY[b.type].name)},lv:function(a,b){return b.lv-a.lv},rev:function(a,b){return (b.rev||0)-(a.rev||0)},stock:function(a,b){return stockTotal(a)-stockTotal(b)}};
+var SORT_BLD=[['def','ふつう'],['new','たてられる'],['name','なまえ'],['lv','レベル'],['cost','ねだん']];
+var SORT_BLDF={name:function(a,b){return jaCmp(a.name,b.name)},lv:function(a,b){return a.lv-b.lv},cost:function(a,b){return shopCost(a.id)-shopCost(b.id)},
+  new:function(a,b){var ra=(S.lv>=a.lv?0:2)+(countShop(a.id)?1:0),rb=(S.lv>=b.lv?0:2)+(countShop(b.id)?1:0);return ra-rb||a.lv-b.lv}};
 SHEETS.shops=function(){
   var b='<button class="btn gold" data-act="create">＋ じぶんで しょうひんを かく（オリジナル）</button><button class="btn" data-act="open" data-a="home">じぶんの いえ</button><p class="note">おみせを えらぶと くわしく みられるよ。マップで おみせを タップしても OK。</p>';
-  S.shops.forEach(function(s){var d=SHOPBY[s.type],tot=stockTotal(s);
+  if(S.shops.length>1)b+=sortBar('sortOwn',SORT_OWN);
+  sortList(S.shops,'sortOwn',SORT_OWNF).forEach(function(s){var d=SHOPBY[s.type],tot=stockTotal(s);
     b+='<button class="row" style="border:none;text-align:left;color:inherit" data-act="openShop" data-a="'+s.id+'"><img class="ic" style="width:42px;height:56px" src="'+shopCv(s.type,s.lv).toDataURL()+'" alt=""><div class="grow"><div class="nm">'+d.name+' Lv'+s.lv+'</div><div class="sub">ざいこ '+tot+'/'+cap(s)+'・つくってる '+s.q.length+'/'+slots(s)+'・うりあげ '+fmt(s.rev)+'</div></div>'+(tot===0?'<span class="ng pix">うりきれ</span>':'')+'</button>'});
   return ['おみせ いちらん','',b];
 };
@@ -2968,6 +2982,7 @@ function onAct(e){
   case 'xslot':{var xc=xslotCost();if(S.money<xc){toast(REASON.money,'bad');break}S.money-=xc;S.xslot=(S.xslot||0)+1;toast('なかまの わくが '+staffSlots()+'人に なった！','good');sfx('buy');saveSoon();renderSheet();break}
   case 'ura':{var ui=$('#uraIn');uraSay(ui?ui.value:'');var ui2=$('#uraIn');if(ui2)ui2.value='';break}
   case 'uraBook':uraBook();break;
+  case 'sortSet':sortSet(a,b);break;
   case 'gift':uraFix();if(!S.ura.found.gift){S.ura.found.gift=1;toast('うらわざ はっけん！「ひみつの おこづかい」','gold')}addMoney(100000);bumpMoney();coinFly(cam.x,cam.y,8);sfx('star');toast('ひみつの おこづかい +100,000コイン！','gold');saveSoon();break;
   case 'tm':openTM();break;
   case 'autoShops':{var an=+a,al2=autoShopsList();if(an>=999&&al2.length>10){dlg('ぜんぶ たてる？','<p>まだ ない おみせを '+al2.length+'しゅるい、あいている ところに たてるよ。コインや とちが たりなく なったら そこで とまるよ。</p>',[{t:'たてる',c:'gold',f:function(){autoShops(999)}},{t:'やめる'}])}else autoShops(an);break}
