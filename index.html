@@ -1557,6 +1557,7 @@ var PANTS=['#3a4a7a','#5a3a2a','#2a2a3a','#7a6a5a','#4a6a3a','#8a3a5a'];
 function randLook(kind){var elder=kind==='elder';return {s:ri(0,3),h:elder?6:ri(0,7),hs:ri(0,3),sh:ri(0,9),p:ri(0,5),kid:kind==='kid'?1:0,ap:0,vip:0}}
 var PCV={};
 function personCv(L,dir,fr){
+  if(L&&L.art&&L.artId)return personArtCv(L,dir,fr);
   var key=L.s+'_'+L.h+'_'+L.hs+'_'+L.sh+'_'+L.p+'_'+L.kid+'_'+L.ap+'_'+L.vip+'_'+dir+'_'+fr+(L.cs||L.ch||L.csh||L.cp||L.acc?'_'+(L.cs||'')+(L.ch||'')+(L.csh||'')+(L.cp||'')+'_'+(L.acc||0):'');
   if(PCV[key])return PCV[key];
   var c;
@@ -2764,11 +2765,19 @@ var PM_SKIN=SKIN.concat(['#fff0e0','#7a4a2a','#a8d8ff','#a8e8a8','#e0c0ff']),PM_
 var PM_HS=['ふつう','ながい','ぴょこ','ぼうし','ツインテール','おだんご'],PM_ACC=['なし','めがね','リボン','かんむり','ねこみみ'];
 function pmNew(){var L=randLook('adult');L.ap=0;return {id:0,name:pick(NAMES),L:L,walk:1}}
 function pmEdit(id){var st=staffBy(+id);if(!st)return;var L={};for(var k in st.look)L[k]=st.look[k];UI.pm={id:st.id,name:st.name,L:L,walk:st.walk===0?0:1};openSheet('staff',null,'make')}
-function pmImg(L){var c=mk(14*2*7+14,18*7),x=c.getContext('2d');x.imageSmoothingEnabled=false;x.drawImage(personCv(L,0,0),0,0,14*7,18*7);x.drawImage(personCv(L,2,1),14*7+14,0,14*7,18*7);return c.toDataURL()}
+var PERSON_SIZES=[[14,18,'あらい'],[28,36,'ふつう'],[42,54,'こまかい']];
+function personArtCv(L,dir,fr){var a=artNorm(L.art);if(!a)return mk(14,18);var key='A'+L.artId+'_'+(dir===3?1:0)+'_'+(fr?1:0);if(PCV[key])return PCV[key];
+  var k=Math.max(1,Math.round(a.w/14)),W=14*k,H=18*k,c=mk(W,H),x=c.getContext('2d');x.imageSmoothingEnabled=false;
+  var sc=Math.min(W/a.w,H/a.h),dw=Math.round(a.w*sc),dh=Math.round(a.h*sc),ox=Math.round((W-dw)/2),oy=H-dh-(fr?k:0);
+  if(dir===3){x.translate(W,0);x.scale(-1,1)}x.drawImage(artCv(a),ox,oy,dw,dh);return PCV[key]=c}
+function cvToArt(c){var d=c.getContext('2d').getImageData(0,0,c.width,c.height).data,pal=[],map={},px=[];for(var i=0;i<d.length;i+=4){if(d[i+3]<128){px.push('.');continue}var h='#'+[d[i],d[i+1],d[i+2]].map(function(v){return ('0'+v.toString(16)).slice(-2)}).join('');if(!(h in map)){if(pal.length>=ART_A.length){px.push('.');continue}map[h]=ART_A[pal.length];pal.push(h)}px.push(map[h])}return {w:c.width,h:c.height,pal:pal,px:px.join('')}}
+function pmDrawDone(ar){if(!UI.pm)return;if(ar&&artUsed(ar)){UI.pm.L.art=ar;UI.pm.L.artId=Date.now().toString(36)+ri(0,999)}renderSheet()}
+function pmImg(L){var c=mk(14*2*7+14,18*7),x=c.getContext('2d');x.imageSmoothingEnabled=false;if(L.art&&L.artId){x.drawImage(personCv(L,0,0),0,0,14*7,18*7);x.drawImage(personCv(L,3,0),14*7+14,0,14*7,18*7);return c.toDataURL()}x.drawImage(personCv(L,0,0),0,0,14*7,18*7);x.drawImage(personCv(L,2,1),14*7+14,0,14*7,18*7);return c.toDataURL()}
 function pmSw(field,list,cur){return '<div class="pmsw">'+list.map(function(c){return '<button data-act="pmSet" data-a="'+field+'" data-b="'+c+'" style="background:'+c+'"'+(cur===c?' class="on"':'')+' aria-label="いろ"></button>'}).join('')+'<label class="pmcol" title="じゆうな いろ"><input type="color" data-pmcol="'+field+'" value="'+(/^#[0-9a-f]{6}$/i.test(cur||'')?cur:'#888888')+'">🎨</label></div>'}
 function pmBody(){if(!UI.pm)UI.pm=pmNew();var P=UI.pm,L=P.L,b='';
   b+='<p class="note">じぶんだけの ひとを つくって なかまに しよう！ つくった ひとは おみせで はたらいたり、ぼうけんに いったり、おやすみの ひに まちを あるいたり するよ。</p>';
   b+='<div class="row" style="justify-content:center;background:linear-gradient(#bfe4ff,#e8f6ff)"><img id="pmPrev" src="'+pmImg(L)+'" alt="" style="image-rendering:pixelated;width:224px;height:126px"></div>';
+  b+='<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:6px 0"><button class="btn gold" data-act="pmDraw">✏️ じぶんで えを かく</button>'+(L.art&&L.artId?'<button class="btn" data-act="pmUndraw">かいた えを やめる（パーツに もどす）</button>':'')+'</div>'+(L.art&&L.artId?'<p class="note">いまは かいた えを つかっているよ。したの いろや かみがたは、「パーツに もどす」と つかえるよ。</p>':'<p class="note">したの パーツで えらぶか、「じぶんで えを かく」で すきに かいてね。</p>');
   b+='<div class="sec">なまえ</div><input id="pmName" maxlength="10" value="'+escH(P.name)+'" style="font-size:18px;padding:10px;border-radius:8px;border:2px solid var(--dim);background:var(--night);color:var(--line);-webkit-user-select:text;user-select:text;width:100%;box-sizing:border-box">';
   b+='<div class="sec">はだの いろ</div>'+pmSw('cs',PM_SKIN,L.cs||SKIN[L.s]);
   b+='<div class="sec">かみの いろ</div>'+pmSw('ch',PM_HAIR,L.ch||HAIR[L.h]);
@@ -2793,16 +2802,33 @@ function pmSave(){var P=UI.pm;if(!P)return;var nm=($('#pmName')&&$('#pmName').va
 
 /* --- ぼうけん --- */
 var ADV=[
- {id:'mori',name:'はじまりの もり',lv:1,need:8,dur:60,ico:'🌳',bg:'#5aa060',mons:[['🟢','スライム'],['🍄','きのこおばけ']],boss:['🐻','もりの くまさん'],loot:['wood','berry','apple'],coin:600,tre:[['🌰','どんぐりの ぼうし'],['🍀','しあわせの よつば'],['🪈','もりの ふえ']]},
- {id:'dokutsu',name:'きらきら どうくつ',lv:5,need:14,dur:90,ico:'💎',bg:'#5a5a8a',mons:[['🦇','こうもり'],['🪨','いわゴーレム']],boss:['🦂','どうくつの ぬし'],loot:['gem','mushroom','wood'],coin:1500,tre:[['💎','にじいろの いし'],['🔦','ふしぎな ランプ'],['🗝️','ひみつの かぎ']]},
+ {id:'mori',name:'はじまりの もり',lv:1,need:8,dur:60,ico:'🌳',bg:'#5aa060',mons:[['🟢','スライム'],['🍄','きのこおばけ']],boss:['🐻','もりの くまさん'],loot:['wood','berry','apple'],coin:600,tre:[['🌰','どんぐりの ぼうし'],['🍀','しあわせの よつば'],['🎵','もりの ふえ']]},
+ {id:'dokutsu',name:'きらきら どうくつ',lv:5,need:14,dur:90,ico:'💎',bg:'#5a5a8a',mons:[['🦇','こうもり'],['⛰️','いわゴーレム']],boss:['🦂','どうくつの ぬし'],loot:['gem','mushroom','wood'],coin:1500,tre:[['💎','にじいろの いし'],['🔦','ふしぎな ランプ'],['🗝️','ひみつの かぎ']]},
  {id:'umi',name:'なみなみ うみべ',lv:10,need:22,dur:120,ico:'🌊',bg:'#3a8ad8',mons:[['🦀','カニ'],['🐙','タコ']],boss:['🦈','おおザメ'],loot:['fish','shrimp','nori'],coin:3500,tre:[['🐚','うたう かいがら'],['🧭','かいぞくの コンパス'],['🔱','うみの ほこ']]},
- {id:'yama',name:'こおりの やま',lv:15,need:30,dur:150,ico:'🏔️',bg:'#9fd8ff',mons:[['⛄','ゆきだるま'],['🐧','ペンギン ぐんだん']],boss:['🦣','マンモス'],loot:['ice','milk','yarn'],coin:7000,tre:[['❄️','とけない ゆき'],['🧣','あったか マフラー'],['🏔️','ちょうじょうの はた']]},
+ {id:'yama',name:'こおりの やま',lv:15,need:30,dur:150,ico:'🏔️',bg:'#9fd8ff',mons:[['⛄','ゆきだるま'],['🐧','ペンギン ぐんだん']],boss:['🐘','マンモス'],loot:['ice','milk','yarn'],coin:7000,tre:[['❄️','とけない ゆき'],['🧣','あったか マフラー'],['🏔️','ちょうじょうの はた']]},
  {id:'okashi',name:'おかしの しま',lv:20,need:40,dur:180,ico:'🍭',bg:'#ff9ad5',mons:[['🍬','キャンディへい'],['🧁','カップケーキまじん']],boss:['🍫','チョコキング'],loot:['sugar','choco','honey'],coin:14000,tre:[['🍭','まほうの ぺろぺろ'],['🎂','えいえんの ケーキ'],['🥄','きんの スプーン']]},
  {id:'iseki',name:'こだいの いせき',lv:25,need:52,dur:210,ico:'🏛️',bg:'#c0a060',mons:[['💀','ガイコツ'],['🗿','せきぞう']],boss:['🧞','いせきの まじん'],loot:['gem','cloth','wheat'],coin:28000,tre:[['🏺','こだいの つぼ'],['📜','まぼろしの ちず'],['👑','おうさまの かんむり']]},
  {id:'kazan',name:'ドラゴンの かざん',lv:30,need:64,dur:240,ico:'🌋',bg:'#c0392b',mons:[['🔥','ひのたま'],['🦎','サラマンダー']],boss:['🐲','ほのおの ドラゴン'],loot:['gem','meat','potato'],coin:55000,tre:[['🥚','ドラゴンの たまご'],['🛡️','ほのおの たて'],['⚔️','でんせつの けん']]},
- {id:'uchu',name:'うちゅうの はて',lv:36,need:78,dur:300,ico:'🪐',bg:'#2a2a5a',mons:[['👾','うちゅうじん'],['🛸','UFO']],boss:['🌌','ぎんがの まおう'],loot:['gem','ice','tomato'],coin:110000,tre:[['⭐','ながれぼしの かけら'],['🪐','ちいさな わくせい'],['🌠','ねがいの ほし']]}
+ {id:'uchu',name:'うちゅうの はて',lv:36,need:78,dur:300,ico:'🪐',bg:'#2a2a5a',mons:[['👾','うちゅうじん'],['🛸','UFO']],boss:['🌌','ぎんがの まおう'],loot:['gem','ice','tomato'],coin:110000,tre:[['⭐','ながれぼしの かけら'],['🪐','ちいさな わくせい'],['🌠','ねがいの ほし']]},
+ {id:"harappa",name:"ぽかぽか はらっぱ",lv:2,need:10,dur:72,ico:"🌼",bg:"#8ac24a",mons:[["🐛", "いもむし"], ["🐝", "はち"]],boss:["🐗", "いのしし"],loot:["wheat", "flower", "egg"],coin:700,tre:[["🌼", "ひかる はな"], ["🐞", "ラッキー てんとうむし"], ["🪁", "そらとぶ たこ"]]},
+ {id:"bokujo",name:"もぐもぐ ぼくじょう",lv:3,need:12,dur:78,ico:"🐄",bg:"#b8e070",mons:[["🐔", "にわとり"], ["🐑", "ひつじ"]],boss:["🐂", "あばれうし"],loot:["milk", "egg", "veg"],coin:800,tre:[["🥛", "まほうの ミルク"], ["🔔", "カウベル"], ["🧺", "きんの バスケット"]]},
+ {id:"obake",name:"おばけ やしき",lv:4,need:14,dur:84,ico:"👻",bg:"#6a5a8a",mons:[["👻", "おばけ"], ["🦇", "こうもり"]],boss:["🧛", "ドラキュラ"],loot:["choco", "sugar", "cloth"],coin:900,tre:[["🕯️", "きえない ろうそく"], ["🎃", "わらう かぼちゃ"], ["🔮", "すいしょうだま"]]},
+ {id:"jungle",name:"わいわい ジャングル",lv:7,need:20,dur:102,ico:"🌴",bg:"#2f8a4c",mons:[["🐒", "さる"], ["🐍", "へび"]],boss:["🦍", "ゴリラ"],loot:["banana", "berry", "wood"],coin:1400,tre:[["🍌", "きんの バナナ"], ["🦜", "おしゃべり オウム"], ["🗿", "なぞの せきぞう"]]},
+ {id:"sabaku",name:"あつあつ さばく",lv:8,need:22,dur:108,ico:"🏜️",bg:"#e0b060",mons:[["🐪", "らくだ"], ["🌵", "サボテンマン"]],boss:["🐊", "ワニの おう"],loot:["potato", "lemon", "wheat"],coin:1600,tre:[["⏳", "すなどけい"], ["🏺", "オアシスの つぼ"], ["☀️", "たいようの かけら"]]},
+ {id:"oshiro",name:"まぼろしの おしろ",lv:12,need:30,dur:132,ico:"🏰",bg:"#a8a0c0",mons:[["🛡️", "よろいの へいし"], ["🐀", "ねずみ"]],boss:["🧙", "くろまどうし"],loot:["cloth", "gem", "honey"],coin:2800,tre:[["🗡️", "きしの けん"], ["👗", "おひめさまの ドレス"], ["💍", "まほうの ゆびわ"]]},
+ {id:"yosei",name:"ようせいの もり",lv:13,need:32,dur:138,ico:"🧚",bg:"#9ad89a",mons:[["🦋", "ちょうちょ"], ["🍄", "どくきのこ"]],boss:["🦄", "ユニコーン"],loot:["flower", "honey", "berry"],coin:3200,tre:[["🌸", "えいえんの はな"], ["🧚", "ようせいの はね"], ["🌈", "にじの しずく"]]},
+ {id:"kaitei",name:"かいていの みやこ",lv:17,need:40,dur:162,ico:"🐠",bg:"#1f6a9a",mons:[["🐡", "フグ"], ["🦑", "イカ"]],boss:["🐋", "クジラ"],loot:["fish", "shrimp", "nori"],coin:5600,tre:[["🔱", "かいおうの ほこ"], ["🦪", "しんじゅ"], ["🐚", "うたう ほらがい"]]},
+ {id:"kaizoku",name:"かいぞくせん",lv:18,need:42,dur:168,ico:"⛵",bg:"#5a3a2a",mons:[["🦜", "かいぞく オウム"], ["💣", "たる ばくだん"]],boss:["☠️", "かいぞく せんちょう"],loot:["gem", "fish", "cloth"],coin:6500,tre:[["🗺️", "たからの ちず"], ["🏴", "かいぞくの はた"], ["💰", "きんかの ふくろ"]]},
+ {id:"kumo",name:"くもの うえの くに",lv:22,need:50,dur:192,ico:"☁️",bg:"#bfe4ff",mons:[["🌩️", "かみなりぐも"], ["🕊️", "はと"]],boss:["⚡", "かみなりさま"],loot:["ice", "milk", "sugar"],coin:11300,tre:[["☁️", "ふわふわ くも"], ["🪶", "てんしの はね"], ["🌤️", "はれの たま"]]},
+ {id:"kyoryu",name:"きょうりゅうの しま",lv:23,need:52,dur:198,ico:"🦕",bg:"#6a9a3a",mons:[["🦕", "くびながりゅう"], ["🦎", "トカゲ"]],boss:["🦖", "ティラノサウルス"],loot:["meat", "egg", "veg"],coin:13000,tre:[["🦴", "きょうりゅうの ほね"], ["🥚", "きょうりゅうの たまご"], ["🌋", "ちいさな かざん"]]},
+ {id:"omocha",name:"おもちゃの くに",lv:27,need:60,dur:222,ico:"🧸",bg:"#ff9ad5",mons:[["🤖", "ブリキ ロボット"], ["🎈", "ふうせんへい"]],boss:["🤡", "ピエロの おう"],loot:["wood", "yarn", "sugar"],coin:22700,tre:[["🧸", "しゃべる くま"], ["🚂", "まほうの きしゃ"], ["🎁", "びっくり ばこ"]]},
+ {id:"mahou",name:"まほうの がっこう",lv:28,need:62,dur:228,ico:"🔮",bg:"#6a3a9a",mons:[["🧹", "とぶ ほうき"], ["📚", "まどうしょ"]],boss:["🦉", "ふくろう せんせい"],loot:["gem", "berry", "honey"],coin:26100,tre:[["🪄", "まほうの つえ"], ["📕", "でんせつの ほん"], ["🎓", "まほうの ぼうし"]]},
+ {id:"chitei",name:"ちていの くに",lv:32,need:70,dur:252,ico:"⛏️",bg:"#5a3a1a",mons:[["🐜", "ありの へいたい"], ["🦗", "バッタ"]],boss:["👹", "ちていの おに"],loot:["gem", "potato", "mushroom"],coin:45700,tre:[["💎", "おおきな ダイヤ"], ["⛏️", "ドワーフの つるはし"], ["🔥", "ちていの ほのお"]]},
+ {id:"tsuki",name:"つきの せかい",lv:34,need:74,dur:264,ico:"🌙",bg:"#3a3a6a",mons:[["🐇", "つきうさぎ"], ["🌑", "かげ"]],boss:["🌝", "つきの おうさま"],loot:["rice", "ice", "sugar"],coin:60400,tre:[["🍡", "つきみ だんご"], ["🌙", "みかづきの かけら"], ["🔭", "ほしの ぼうえんきょう"]]},
+ {id:"mirai",name:"みらいの まち",lv:38,need:82,dur:288,ico:"🌃",bg:"#2a4a6a",mons:[["🛰️", "えいせい"], ["🚁", "ドローン"]],boss:["🧠", "マザー コンピュータ"],loot:["gem", "tomato", "cheese"],coin:105700,tre:[["🔋", "むげん でんち"], ["🕶️", "みらいの メガネ"], ["🛸", "じぶん せんようUFO"]]},
+ {id:"god",name:"ゴッドの せかい",lv:40,need:86,dur:300,ico:"✨",bg:"#ffd24a",mons:[["🌈", "にじの せい"], ["👼", "てんし"]],boss:["🐉", "ゴッド ドラゴン"],loot:["gem", "honey", "cheese"],coin:139800,tre:[["👑", "ゴッドの かんむり"], ["🏆", "でんせつの トロフィー"], ["✨", "かみさまの ひかり"]]}
 ];
-var ADVBY={};ADV.forEach(function(a,i){a.idx=i;ADVBY[a.id]=a});
+ADV.sort(function(a,b){return a.lv-b.lv});var ADVBY={};ADV.forEach(function(a,i){a.idx=i;ADVBY[a.id]=a});
 function advFix(){if(!S.adv||typeof S.adv!=='object')S.adv={party:null,tre:{},cnt:0};if(!S.adv.tre)S.adv.tre={}}
 function advPow(st){return st.lv*2+st.mk+st.sv}
 function advTreN(){advFix();return Object.keys(S.adv.tre).length}
@@ -3154,6 +3180,8 @@ function onAct(e){
   case 'pmSet':pmSet(a,b);break;
   case 'pmRand':{var P0=UI.pm||pmNew(),nm0=$('#pmName')?$('#pmName').value:P0.name,R=pmNew();R.id=P0.id;R.name=nm0;R.walk=P0.walk;R.L.cs=pick(PM_SKIN);R.L.ch=pick(PM_HAIR);R.L.csh=pick(PM_SHIRT);R.L.cp=pick(PM_PANTS);R.L.hs=ri(0,5);R.L.acc=rnd()<0.5?ri(1,4):0;R.L.kid=rnd()<0.3?1:0;UI.pm=R;renderSheet();break}
   case 'pmSave':pmSave();break;
+  case 'pmDraw':{if(!UI.pm)UI.pm=pmNew();var nmD=$('#pmName');if(nmD)UI.pm.name=nmD.value;var base=UI.pm.L.art;if(!base){var cc=mk(28,36),cx2=cc.getContext('2d');cx2.imageSmoothingEnabled=false;cx2.drawImage(personCv(UI.pm.L,0,0),0,0,28,36);base=cvToArt(cc)}openDraw({art:base,sizes:PERSON_SIZES,def:1,title:'なかまの え',done:pmDrawDone});break}
+  case 'pmUndraw':if(UI.pm){delete UI.pm.L.art;delete UI.pm.L.artId}renderSheet();break;
   case 'pmCancel':UI.pm=null;renderSheet();break;
   case 'pmEdit':pmEdit(a);break;
   case 'advPl':UI.advPl=a;renderSheet();break;
@@ -3666,9 +3694,9 @@ function render(t){
   DROPS.forEach(function(d){list.push({y:d.y,x:d.x,f:function(){drawDrop(d,t)}})});
   S.objs.forEach(function(o){if(o.k==='road')return;var z=sizeOf(o);list.push({y:(o.y+z.h)*TS-(z.h===1?1:0),x:o.x*TS,f:function(){var c=objCv(o,t),cs=c._s||1,cw=c.width/cs,ch=c.height/cs;ctx.drawImage(c,o.x*TS+(z.w*TS-cw)/2,(o.y+z.h)*TS-ch,cw,ch);if(o.k==='myhome')drawHomePlate(o)}});
     if(o.k==='myhome'){var ax=(o.x+3)*TS+4,ay=(o.y+3)*TS+6;list.push({y:ay,x:ax,f:function(){var bob=Math.floor(t*1.6)%2;ctx.fillStyle='rgba(0,0,0,.18)';ctx.fillRect(ax-4,ay-1,9,2);ctx.drawImage(personCv(S.home.av,0,bob),ax-7,ay-16)}})}});
-  CUST.forEach(function(c){if(c.st==='in')return;list.push({y:c.y+c.oy,x:c.x,f:function(){var fr=(Math.abs(c.x-(c.nx*TS+8))+Math.abs(c.y-(c.ny*TS+8)))>0.5?(Math.floor(c.an)%2?1:2):0;var img=personCv(c.look,c.dir,fr);var dx=Math.round(c.x+c.ox-7),dy=Math.round(c.y+c.oy-16);ctx.fillStyle='rgba(0,0,0,.18)';ctx.fillRect(dx+3,dy+15,8,2);ctx.drawImage(img,dx,dy);drawCustomerExtras(c,dx,dy);if(c.emo)drawEmo(c.emo.k,dx+5,dy-6)}})});
+  CUST.forEach(function(c){if(c.st==='in')return;list.push({y:c.y+c.oy,x:c.x,f:function(){var fr=(Math.abs(c.x-(c.nx*TS+8))+Math.abs(c.y-(c.ny*TS+8)))>0.5?(Math.floor(c.an)%2?1:2):0;var img=personCv(c.look,c.dir,fr);var dx=Math.round(c.x+c.ox-7),dy=Math.round(c.y+c.oy-16);ctx.fillStyle='rgba(0,0,0,.18)';ctx.fillRect(dx+3,dy+15,8,2);ctx.drawImage(img,dx,dy,14,18);drawCustomerExtras(c,dx,dy);if(c.emo)drawEmo(c.emo.k,dx+5,dy-6)}})});
   S.staff.forEach(function(st,i){var sh=st.shop&&shopBy(st.shop);if(!sh)return;var d=doorOf(sh);var n=S.staff.filter(function(x){return x.shop===sh.id}).indexOf(st);var px=sh.x*TS+(n%2?40:6)+(n>1?4:0),py=(sh.y+3)*TS-2+(n>1?6:0);var bob=Math.floor(t*2+i)%2;
-    list.push({y:py+1,x:px,f:function(){ctx.drawImage(personCv(st.look,0,bob),px-7,py-16)}})});
+    list.push({y:py+1,x:px,f:function(){ctx.drawImage(personCv(st.look,0,bob),px-7,py-16,14,18)}})});
   list=list.filter(function(o){return o.x>vx0-48&&o.x<vx1&&o.y>vy0&&o.y<vy1+48});
   list.sort(function(a,b){return a.y-b.y||a.x-b.x});list.forEach(function(o){o.f()});
   drawBunting(t);
