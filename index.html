@@ -2729,7 +2729,7 @@ SHEETS.shops=function(){
 SHEETS.staff=function(sh){
   var tab=sh.tab||'list';sh.tab=tab;var b='',max=staffSlots();
   b+='<p class="note">なかま '+S.staff.length+'人（なんにんでも やとえるよ）。「つくる がかり」は じどうで しょうひんを つくり、「せっきゃく がかり」は たくさん かってもらえるように するよ。はたらくと レベルが あがるよ。</p>';
-  if(tab==='list'){if(!S.staff.length)b+='<p class="note">まだ なかまが いないよ。「やとう」から さがそう。</p>';S.staff.forEach(function(st){b+=staffRow(st)})}
+  if(tab==='list'){b+='<button class="btn gold" data-act="tab" data-a="adv" style="width:100%;margin-bottom:8px">🗺️ ぼうけんに いく なかまを えらぶ</button>';if(!S.staff.length)b+='<p class="note">まだ なかまが いないよ。「やとう」から さがそう。</p>';S.staff.forEach(function(st){b+=staffRow(st)})}
   else{
     S.cand.forEach(function(st,i){b+='<div class="row"><img class="ic" src="'+personCv(st.look,0,0).toDataURL()+'" alt=""><div class="grow"><div class="nm">'+st.name+'</div><div class="sub">つくる '+'★'.repeat(st.mk)+'・せっきゃく '+'★'.repeat(st.sv)+'</div></div><button class="btn go" data-act="hire" data-a="'+i+'" data-cost="'+hireCost()+'"'+(S.staff.length>=max?' disabled':'')+'>やとう<small>むりょう</small></button></div>'});
     if(!S.cand.length)b+='<p class="note">いまは きてくれる 人が いないよ。つぎの日に また くるよ。</p>';
@@ -2738,7 +2738,7 @@ SHEETS.staff=function(sh){
   }
   return ['なかま',tabs([['list','いまの なかま'],['hire','やとう']],tab),b];
 };
-(function(){var s0=SHEETS.staff;SHEETS.staff=function(sh){var tab=sh.tab||'list';sh.tab=tab;if(tab==='make')return ['なかま',staffTabs(tab),pmBody()];if(tab==='adv')return ['なかま',staffTabs(tab),advBody()];var r=s0(sh);r[1]=staffTabs(sh.tab);return r}})();
+(function(){var s0=SHEETS.staff;SHEETS.staff=function(sh){var tab=sh.tab||'list';sh.tab=tab;if(tab==='make'){var mb;try{mb=pmBody()}catch(err){mb='<p class="why">エラー：'+escH(String(err&&err.message||err))+'</p>'}return ['なかま',staffTabs(tab),mb]}if(tab==='adv'){var ab;try{ab=advBody()}catch(err){ab='<p class="why">ごめんね、ぼうけんの がめんで エラーが でたよ：'+escH(String(err&&err.message||err))+'</p>'}return ['なかま',staffTabs(tab),ab]}var r=s0(sh);r[1]=staffTabs(sh.tab);return r}})();
 
 
 /* ===== ミニゲーム・ボスせん の まど ===== */
@@ -2807,7 +2807,7 @@ function advFix(){if(!S.adv||typeof S.adv!=='object')S.adv={party:null,tre:{},cn
 function advPow(st){return st.lv*2+st.mk+st.sv}
 function advTreN(){advFix();return Object.keys(S.adv.tre).length}
 function advStart(){advFix();var pl=ADVBY[UI.advPl],ids=(UI.advSel||[]).filter(function(i){var st=staffBy(i);return st&&!st.adv});
-  if(!pl||S.lv<pl.lv){toast('ばしょを えらんでね','bad');return}if(!ids.length){toast('いく なかまを えらんでね（3にん まで）','bad');return}if(S.adv.party){toast('いまは ぼうけん中だよ','bad');return}
+  if(!pl||S.lv<pl.lv){toast('ばしょを えらんでね','bad');return}if(!ids.length){toast('したの「② なかま」を タップして、いく なかまを えらんでね','bad');return}if(S.adv.party){toast('いまは ぼうけん中だよ','bad');return}
   var pw=0,names=[];ids.forEach(function(i){var st=staffBy(i);pw+=advPow(st);names.push(st.name);st.adv=1;st.advShop=st.shop;st.shop=0});
   var ch=Math.min(1,0.3+0.7*pw/pl.need),ok=rnd()<ch,log=[],n=3+Math.min(3,pl.idx),dur=pl.dur,lead=names[0];
   log.push([0,pl.ico+' '+pl.name+'へ しゅっぱつ！']);
@@ -2849,16 +2849,19 @@ function advBody(){advFix();var P=S.adv.party,b='';
   if(P){var pl=ADVBY[P.pl],mem=advMembers(P);
     b+='<div class="row" style="background:'+pl.bg+'33;align-items:flex-start"><div class="stk" style="font-size:40px">'+pl.ico+'</div><div class="grow"><div class="nm">'+pl.name+' を ぼうけん中</div><div class="sub">'+mem.map(function(st){return '<img src="'+personCv(st.look,0,0).toDataURL()+'" style="width:21px;height:27px;image-rendering:pixelated;vertical-align:middle" alt="">'+escH(st.name)}).join('　')+'</div><div class="pg"><i id="advBar" style="width:'+Math.round(100*P.el/P.dur)+'%"></i></div>'+
       (P.done?'<button class="btn gold" data-act="advOpen" style="margin-top:8px">🎁 たからばこを あける</button>':'<div class="sub">'+(S.speed>1?'はやおくり中・':'')+'かえってくるまで ちょっと まってね</div>')+'<div id="advLog" class="sub" style="margin-top:6px;max-height:160px;overflow:auto">'+advLogHTML(P)+'</div></div></div>'}
-  else{var sel=UI.advSel=UI.advSel||[],cur=UI.advPl&&ADVBY[UI.advPl]&&S.lv>=ADVBY[UI.advPl].lv?UI.advPl:'mori';UI.advPl=cur;
-    b+='<div class="sec">① ばしょを えらぶ</div>';
-    ADV.forEach(function(pl){var lk=S.lv<pl.lv,got=pl.tre.filter(function(t,i){return S.adv.tre[pl.id+'_'+i]}).length;
-      b+='<button class="row'+(lk?' lock':'')+'" style="border:'+(cur===pl.id?'3px solid var(--coin)':'none')+';text-align:left;color:inherit;width:100%" '+(lk?'disabled':'data-act="advPl" data-a="'+pl.id+'"')+'><div class="stk" style="font-size:34px;min-width:1.4em">'+pl.ico+'</div><div class="grow"><div class="nm">'+pl.name+'</div><div class="sub">'+(lk?'レベル'+pl.lv+'で いける':'つよさ めやす '+pl.need+'・'+Math.round(pl.dur/60*10)/10+'ぷん・ボス '+pl.boss[0]+'・たからもの '+got+'/3')+'</div></div></button>'});
-    b+='<div class="sec">② なかまを えらぶ（3にん まで）</div>';var pw=0;
+  else{var sel=UI.advSel=(UI.advSel||[]).filter(function(i){var st=staffBy(i);return st&&!st.adv}),cur=UI.advPl&&ADVBY[UI.advPl]&&S.lv>=ADVBY[UI.advPl].lv?UI.advPl:'mori';UI.advPl=cur;
+    var pw=0;sel.forEach(function(i){pw+=advPow(staffBy(i))});var pl2=ADVBY[cur],ch=Math.min(1,0.3+0.7*pw/pl2.need);
+    var go='<div class="row" style="border:3px solid var(--coin)"><div class="grow"><div class="nm">'+pl2.ico+' '+pl2.name+'・なかま '+sel.length+'/3にん・つよさ '+pw+' / '+pl2.need+'</div><div class="sub">'+(!sel.length?'したの「② なかま」を タップして えらんでね':ch>=1?'😄 きっと だいじょうぶ！':ch>=0.7?'🙂 たぶん かてる':ch>=0.5?'😐 ちょっと むずかしい':'😨 とても むずかしい')+'</div></div><button class="btn go" data-act="advGo">しゅっぱつ！</button></div>';
+    b+=go;
+    b+='<div class="sec">① ばしょを タップ</div><div class="grid">';
+    ADV.forEach(function(pl){var lk=S.lv<pl.lv,got=pl.tre.filter(function(t,i){return S.adv.tre[pl.id+'_'+i]}).length,on=cur===pl.id;
+      b+='<button class="card'+(lk?' lock':'')+'" data-act="'+(lk?'advLock':'advPl')+'" data-a="'+pl.id+'" style="'+(on?'border-color:var(--coin);background:#5a4a1a':'')+'"><div style="font-size:40px;line-height:1.1">'+(on?'✅':pl.ico)+'</div><div class="nm">'+pl.name+'</div><div class="sub">'+(lk?'レベル'+pl.lv+'で いける':'つよさ '+pl.need+'・ボス '+pl.boss[0]+'<br>たからもの '+got+'/3')+'</div></button>'});
+    b+='</div><div class="sec">② なかまを タップ（3にん まで）</div>';
     var free=S.staff.filter(function(st){return !st.adv});if(!free.length)b+='<p class="note">なかまが いないよ。「やとう」か「ひとを つくる」で なかまを ふやそう。</p>';
-    free.slice().sort(function(a,c){return advPow(c)-advPow(a)}).forEach(function(st){var on=sel.indexOf(st.id)>=0;if(on)pw+=advPow(st);
-      b+='<button class="row" data-act="advSel" data-a="'+st.id+'" style="border:'+(on?'3px solid var(--coin)':'none')+';text-align:left;color:inherit;width:100%"><img class="ic" src="'+personCv(st.look,0,0).toDataURL()+'" alt="" style="image-rendering:pixelated"><div class="grow"><div class="nm">'+(on?'✅ ':'')+escH(st.name)+' Lv'+st.lv+'</div><div class="sub">つよさ '+advPow(st)+'</div></div></button>'});
-    var pl2=ADVBY[cur],ch=Math.min(1,0.3+0.7*pw/pl2.need);
-    b+='<div class="row" style="position:sticky;bottom:0;background:var(--panel,#2a2d5a)"><div class="grow"><div class="nm">'+pl2.ico+' '+pl2.name+'・つよさ '+pw+' / '+pl2.need+'</div><div class="sub">'+(!sel.length?'なかまを えらんでね':ch>=1?'😄 きっと だいじょうぶ！':ch>=0.7?'🙂 たぶん かてる':ch>=0.5?'😐 ちょっと むずかしい':'😨 とても むずかしい')+'</div></div><button class="btn go" data-act="advGo"'+(sel.length?'':' disabled')+'>しゅっぱつ！</button></div>'}
+    b+='<div class="grid">';
+    free.slice().sort(function(a,c){return advPow(c)-advPow(a)}).forEach(function(st){var on=sel.indexOf(st.id)>=0;
+      b+='<button class="card" data-act="advSel" data-a="'+st.id+'" style="'+(on?'border-color:var(--coin);background:#5a4a1a':'')+'"><img src="'+personCv(st.look,0,0).toDataURL()+'" alt="" style="image-rendering:pixelated;width:42px;height:54px"><div class="nm">'+(on?'✅ ':'')+escH(st.name)+'</div><div class="sub">Lv'+st.lv+'・つよさ '+advPow(st)+'</div></button>'});
+    b+='</div>';if(free.length>6)b+=go}
   var tn=advTreN(),all=ADV.length*3;
   b+='<div class="sec">たからもの ずかん（'+tn+'/'+all+'）</div><div style="display:flex;flex-wrap:wrap;gap:6px">'+ADV.map(function(pl){return pl.tre.map(function(t,i){var g=S.adv.tre[pl.id+'_'+i];return '<div class="row" style="flex:0 0 auto;min-width:0;padding:6px 10px;gap:6px'+(g?'':';opacity:.5')+'"><span style="font-size:24px">'+(g?t[0]:'❓')+'</span><span class="sub">'+(g?t[1]:pl.name)+'</span></div>'}).join('')}).join('')+'</div>';
   if(S.adv.cnt)b+='<p class="note">ぼうけんした かず：'+S.adv.cnt+'かい</p>';
@@ -3154,6 +3157,7 @@ function onAct(e){
   case 'pmCancel':UI.pm=null;renderSheet();break;
   case 'pmEdit':pmEdit(a);break;
   case 'advPl':UI.advPl=a;renderSheet();break;
+  case 'advLock':toast('もっと レベルが あがると いけるよ','bad');break;
   case 'advSel':{var sl=UI.advSel=UI.advSel||[],ix=sl.indexOf(+a);if(ix>=0)sl.splice(ix,1);else if(sl.length>=3)toast('3にん までだよ','bad');else sl.push(+a);renderSheet();break}
   case 'advGo':advStart();break;
   case 'advOpen':advOpen();break;
